@@ -17,4 +17,7 @@ if(WIN32)
 endif()
 
 include(GoogleTest)
-gtest_discover_tests(core_tests)
+# Discovery runs the fresh executable once at build time. The default limit
+# of 5 s failed once on a clean Release build (first launch of a new .exe is
+# slow, e.g. antivirus scan), so give it more room.
+gtest_discover_tests(core_tests DISCOVERY_TIMEOUT 30)
