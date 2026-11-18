@@ -16,6 +16,18 @@ FetchContent_MakeAvailable(sqlite_amalgamation)
 add_library(sqlite3 STATIC ${sqlite_amalgamation_SOURCE_DIR}/sqlite3.c)
 target_include_directories(sqlite3 PUBLIC ${sqlite_amalgamation_SOURCE_DIR})
 
+# zlib: Flate compression used by the PDF export.
+FetchContent_Declare(
+  zlib
+  URL https://github.com/madler/zlib/archive/refs/tags/v1.3.1.zip
+)
+set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(zlib)
+# zconf.h is generated in the build folder, so expose both folders.
+target_include_directories(zlibstatic INTERFACE
+  ${zlib_SOURCE_DIR} ${zlib_BINARY_DIR})
+
 # GoogleTest for unit tests.
 FetchContent_Declare(
   googletest
@@ -29,6 +41,7 @@ if(WIN32)
   add_subdirectory(net)
   add_subdirectory(server)
   add_subdirectory(client)
+  add_subdirectory(tools)
   add_subdirectory(app)
 endif()
 

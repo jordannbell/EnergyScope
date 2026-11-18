@@ -18,10 +18,13 @@ public:
     // Both show an error message box and return FALSE when they fail.
     BOOL LoadSite(const CString& site);
     BOOL AddSampleData(const CString& site);
+    BOOL ExportPdf(const CString& path);
 
 protected:
     afx_msg void OnDataLoad();
     afx_msg void OnDataSample();
+    afx_msg void OnFileExportPdf();
+    afx_msg void OnUpdateFileExportPdf(CCmdUI* ui);
     DECLARE_MESSAGE_MAP()
 
 private:

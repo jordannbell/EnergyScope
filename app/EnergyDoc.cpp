@@ -1,15 +1,19 @@
 #include "EnergyDoc.h"
 
 #include <afxdisp.h>
+#include <afxdlgs.h>
 
 #include <algorithm>
 #include <cmath>
 #include <ctime>
 #include <exception>
+#include <filesystem>
 #include <string>
 
 #include "SiteDialog.h"
 #include "energy/EnergyClient.hpp"
+#include "energy/FileIo.hpp"
+#include "energy/PdfChart.hpp"
 #include "resource.h"
 
 namespace {
@@ -32,6 +36,16 @@ void showError(const std::exception& e) {
     msg.Format(L"%s\n\nLe serveur est-il lancé (energy_server.exe, port %u) ?",
                static_cast<LPCWSTR>(fromUtf8(e.what())), kServerPort);
     AfxMessageBox(msg, MB_ICONERROR);
+}
+
+void showFileError(const std::exception& e) {
+    CString msg(L"Export impossible :\n\n");
+    msg += fromUtf8(e.what());
+    AfxMessageBox(msg, MB_ICONERROR);
+}
+
+long long toKilobytes(std::size_t bytes) {
+    return static_cast<long long>((bytes + 512) / 1024);
 }
 
 // Fake "solar farm" curve: zero at night, a bell shape peaking at noon (UTC).
@@ -58,6 +72,9 @@ IMPLEMENT_DYNCREATE(CEnergyDoc, CDocument)
 BEGIN_MESSAGE_MAP(CEnergyDoc, CDocument)
     ON_COMMAND(ID_DATA_LOAD, &CEnergyDoc::OnDataLoad)
     ON_COMMAND(ID_DATA_SAMPLE, &CEnergyDoc::OnDataSample)
+    ON_COMMAND(ID_FILE_EXPORT_PDF, &CEnergyDoc::OnFileExportPdf)
+    // Called by MFC each time the menu opens: greys out the item if no data.
+    ON_UPDATE_COMMAND_UI(ID_FILE_EXPORT_PDF, &CEnergyDoc::OnUpdateFileExportPdf)
 END_MESSAGE_MAP()
 
 BOOL CEnergyDoc::LoadSite(const CString& site) {
@@ -89,6 +106,43 @@ BOOL CEnergyDoc::AddSampleData(const CString& site) {
         return FALSE;
     }
     return LoadSite(site);
+}
+
+BOOL CEnergyDoc::ExportPdf(const CString& path) {
+    try {
+        CWaitCursor wait;
+        const std::string title = toUtf8(site_);
+        const std::string pdf = energy::renderChartPdf(
+            measurements_, title, energy::PdfOptions::optimized());
+        // Rendered only to show the user how much the optimisation saves.
+        const std::size_t naiveSize =
+            energy::renderChartPdf(measurements_, title, energy::PdfOptions::naive())
+                .size();
+
+        energy::writeBinaryFile(std::filesystem::path(path.GetString()), pdf);
+
+        CString msg;
+        msg.Format(L"PDF enregistré.\n\nTaille : %lld Ko\nSans optimisation : %lld Ko"
+                   L" (%.0f fois plus lourd)",
+                   toKilobytes(pdf.size()), toKilobytes(naiveSize),
+                   static_cast<double>(naiveSize) / static_cast<double>(pdf.size()));
+        AfxMessageBox(msg, MB_ICONINFORMATION);
+        return TRUE;
+    } catch (const std::exception& e) {
+        showFileError(e);
+        return FALSE;
+    }
+}
+
+void CEnergyDoc::OnFileExportPdf() {
+    CFileDialog dlg(FALSE, L"pdf", site_ + L".pdf",
+                    OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY,
+                    L"Fichiers PDF (*.pdf)|*.pdf||", AfxGetMainWnd());
+    if (dlg.DoModal() == IDOK) ExportPdf(dlg.GetPathName());
+}
+
+void CEnergyDoc::OnUpdateFileExportPdf(CCmdUI* ui) {
+    ui->Enable(!measurements_.empty());
 }
 
 void CEnergyDoc::OnDataLoad() {

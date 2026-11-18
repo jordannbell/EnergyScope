@@ -7,3 +7,4 @@
 
 #define ID_DATA_LOAD    32771
 #define ID_DATA_SAMPLE  32772
+#define ID_FILE_EXPORT_PDF 32773

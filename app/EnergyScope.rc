@@ -8,6 +8,8 @@ IDR_MAINFRAME MENU
 BEGIN
     POPUP "&Fichier"
     BEGIN
+        MENUITEM "&Exporter en PDF...",                 ID_FILE_EXPORT_PDF
+        MENUITEM SEPARATOR
         MENUITEM "&Quitter",                            ID_APP_EXIT
     END
     POPUP "&Données"

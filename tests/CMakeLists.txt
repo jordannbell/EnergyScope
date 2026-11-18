@@ -2,6 +2,10 @@ add_executable(core_tests
   MeasurementRepositoryTest.cpp
   ProtocolTest.cpp
   ChartScaleTest.cpp
+  GeometryTest.cpp
+  FormatTest.cpp
+  PdfChartTest.cpp
+  FileIoTest.cpp
 )
 target_link_libraries(core_tests PRIVATE energy_core GTest::gtest_main)
 
