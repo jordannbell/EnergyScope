@@ -23,7 +23,7 @@ C++, MFC, OpenGL, SQL, CMake, Jenkins, Git.
 - [x] Étape 2 : serveur réseau (protocole texte sur TCP, `energy_server`)
 - [x] Étape 3 : client MFC (fenêtre Windows, tableau des mesures, `energy_client`)
 - [x] Étape 4 : vue OpenGL (courbe de puissance, axes, grille, texte)
-- [ ] Étape 5 : export PDF et réduction du poids
+- [x] Étape 5 : export PDF vectoriel et réduction du poids (1,4 Mo -> 24 Ko)
 - [ ] Étape 6 : Jenkinsfile et module legacy refactoré
 
 ## Compiler, tester, lancer (Windows, Visual Studio)
@@ -116,6 +116,39 @@ Pour dessiner avec OpenGL dans une fenêtre Windows (`ChartView.cpp`) :
 
 Le calcul des axes (`ChartScale.cpp` : bornes, "graduations rondes" 1-2-5) est séparé du dessin, donc testé sans fenêtre.
 
+## Export PDF et réduction du poids
+
+Menu **Fichier > Exporter en PDF...** (grisé tant qu'aucune donnée n'est chargée), ou en ligne de commande :
+
+```
+build\tools\energy_export.exe solar-1 courbe.pdf            # version optimisée
+build\tools\energy_export.exe solar-1 courbe_lourde.pdf --naive   # pour comparer
+```
+
+Le PDF est **vectoriel** : la courbe est stockée comme une suite de points reliés par des traits (et non comme une image), donc nette à tout niveau de zoom. Le fichier est écrit à la main (`PdfWriter.cpp`) : en-tête, objets, table des positions (`xref`) et fin. Aucun outil externe sauf `zlib` pour la compression.
+
+### Le gain, levier par levier
+
+Mesuré par le test `PdfChart.EachLeverMakesTheFileNoHeavier` : 20 160 points (7 jours, une mesure toutes les 30 s).
+
+| Levier (cumulatif) | Taille | Idée |
+|---|---:|---|
+| Version "naïve" | 1 399 979 o | chaque segment est un tracé séparé, avec sa couleur et son épaisseur, 6 décimales |
+| + un seul tracé pour toute la courbe | 468 820 o | on n'écrit la couleur et l'épaisseur qu'une fois |
+| + 2 décimales au lieu de 6 | 307 308 o | 0,01 point (1/7200 de pouce) est invisible à l'œil |
+| + simplification (0,1 pt) | 82 841 o | on retire les points qui n'ajoutent aucun détail visible |
+| + compression Flate | **23 994 o** | le texte répétitif se compresse très bien |
+
+Résultat : environ **58 fois plus léger**. En plus : pas de police embarquée (on utilise Helvetica, déjà connue de tout lecteur PDF).
+
+### La simplification (algorithme de Ramer-Douglas-Peucker)
+
+On trace une corde entre le premier et le dernier point. Si le point le plus éloigné de cette corde est à moins de la tolérance (0,1 pt), tous les points intermédiaires sont inutiles : on les supprime. Sinon on garde ce point et on recommence de chaque côté. Garantie testée : **aucun point d'origine n'est à plus de la tolérance de la courbe simplifiée**. Une version intermédiaire mesurait la distance à la *droite* au lieu du *segment* et cassait cette garantie ; un test l'a détecté.
+
+Vérification visuelle : le rendu optimisé diffère de la version lourde sur 0,2 % des pixels (lissage des bords uniquement).
+
+Limite connue : les heures du PDF sont en UTC (le PDF est produit par le code commun, indépendant du fuseau du PC).
+
 Limite connue : les appels réseau bloquent la fenêtre jusqu'à 5 s au maximum (ils tournent dans le thread de l'interface).
 
 ## Structure
@@ -125,6 +158,7 @@ core/    logique métier : base SQLite + protocole texte (sans interface)
 net/     petits outils Winsock communs au serveur et au client
 server/  programme serveur
 client/  bibliothèque cliente EnergyClient (sans MFC, testée)
+tools/   energy_export : export PDF en ligne de commande
 app/     application MFC (Application, Frame, Document, vues tableau + OpenGL, dialogue)
 scripts/ build.ps1 (compiler + tester), run.ps1 (lancer)
 tests/   tests unitaires et de bout en bout (GoogleTest)
