@@ -5,13 +5,16 @@
 add_executable(energy_client WIN32
   EnergyApp.cpp
   EnergyDoc.cpp
+  MainFrame.cpp
   MeasurementView.cpp
+  ChartView.cpp
   SiteDialog.cpp
+  TimeFormat.cpp
   EnergyScope.rc
 )
 
 target_compile_definitions(energy_client PRIVATE _UNICODE UNICODE _AFXDLL)
-target_link_libraries(energy_client PRIVATE energy_clientlib)
+target_link_libraries(energy_client PRIVATE energy_clientlib opengl32)
 
 if(MSVC)
   target_compile_options(energy_client PRIVATE /W4 /permissive- /utf-8)

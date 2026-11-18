@@ -12,8 +12,6 @@
 // Use modern (visual style 6) controls instead of the Windows 95 look.
 #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
-IMPLEMENT_DYNCREATE(CMainFrame, CFrameWnd)
-
 class CEnergyApp : public CWinApp {
 public:
     BOOL InitInstance() override {

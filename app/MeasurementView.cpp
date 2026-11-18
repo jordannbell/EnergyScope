@@ -1,24 +1,11 @@
 #include "MeasurementView.h"
 
-#include <afxdisp.h>
-
-#include <cstdint>
+#include "TimeFormat.h"
 
 namespace {
 
-constexpr int kTimeColumnWidth = 180;
-constexpr int kPowerColumnWidth = 120;
-constexpr std::int64_t kMaxDisplayableTime = 32503680000;  // year 3000
-
-CString formatTime(std::int64_t unixTime) {
-    // CTime asserts on out-of-range values, so show raw numbers instead.
-    if (unixTime < 0 || unixTime > kMaxDisplayableTime) {
-        CString raw;
-        raw.Format(L"%lld", unixTime);
-        return raw;
-    }
-    return CTime(static_cast<__time64_t>(unixTime)).Format(L"%Y-%m-%d %H:%M");
-}
+constexpr int kTimeColumnWidth = 150;
+constexpr int kPowerColumnWidth = 110;
 
 }  // namespace
 
@@ -65,7 +52,7 @@ void CMeasurementView::OnGetDispInfo(NMHDR* header, LRESULT* result) {
 
     CString text;
     if (info->item.iSubItem == 0) {
-        text = formatTime(rows[row].timestamp);
+        text = formatUnixTime(rows[row].timestamp, L"%Y-%m-%d %H:%M");
     } else {
         text.Format(L"%.2f", rows[row].powerKw);
     }
