@@ -24,7 +24,7 @@ C++, MFC, OpenGL, SQL, CMake, Jenkins, Git.
 - [x] Étape 3 : client MFC (fenêtre Windows, tableau des mesures, `energy_client`)
 - [x] Étape 4 : vue OpenGL (courbe de puissance, axes, grille, texte)
 - [x] Étape 5 : export PDF vectoriel et réduction du poids (1,4 Mo -> 24 Ko)
-- [ ] Étape 6 : Jenkinsfile et module legacy refactoré
+- [x] Étape 6 : module legacy refactoré (voir `legacy/README.md`) et pipeline Jenkins (`Jenkinsfile`)
 
 ## Compiler, tester, lancer (Windows, Visual Studio)
 
@@ -116,6 +116,26 @@ Pour dessiner avec OpenGL dans une fenêtre Windows (`ChartView.cpp`) :
 
 Le calcul des axes (`ChartScale.cpp` : bornes, "graduations rondes" 1-2-5) est séparé du dessin, donc testé sans fenêtre.
 
+## Moderniser du code ancien (`legacy/`)
+
+Un petit module écrit "à l'ancienne" (variables globales, tableaux fixes, `strtok`, `sprintf`) est caractérisé par des tests, refactoré sans changer son comportement, puis corrigé dans un commit séparé. Les 15 tests de caractérisation passent avant et après le refactoring. Détails et historique à relire : [`legacy/README.md`](legacy/README.md).
+
+## Intégration continue (Jenkins)
+
+Le `Jenkinsfile` décrit un pipeline à trois étapes : **Configure**, **Build**, **Test**. Chaque étape appelle `scripts/ci.ps1 -Stage <étape>`, ce qui permet de rejouer exactement la même chose en local :
+
+```
+.\scripts\ci.ps1 -Stage Configure -BuildDir build-ci
+.\scripts\ci.ps1 -Stage Build     -BuildDir build-ci
+.\scripts\ci.ps1 -Stage Test      -BuildDir build-ci
+```
+
+L'étape Test produit `test-results.xml` (format JUnit) que Jenkins affiche. En cas de succès, les exécutables sont archivés.
+
+**Ce qui est vérifié, et ce qui ne l'est pas.** Les trois scripts ont été exécutés en local, en configuration `Release`, depuis un dossier vide : 85 tests sur 85, rapport JUnit valide. Le `Jenkinsfile` lui-même n'a **pas** été exécuté sur un vrai serveur Jenkins : il est écrit d'après la documentation et suppose un agent Windows étiqueté `windows` avec Visual Studio (composants C++ et MFC).
+
+Un problème trouvé grâce à la configuration `Release` : la découverte automatique des tests (limite par défaut de 5 s) a échoué une fois sur un exécutable neuf. Le délai est maintenant de 30 s (`tests/CMakeLists.txt`).
+
 ## Export PDF et réduction du poids
 
 Menu **Fichier > Exporter en PDF...** (grisé tant qu'aucune donnée n'est chargée), ou en ligne de commande :
@@ -159,8 +179,10 @@ net/     petits outils Winsock communs au serveur et au client
 server/  programme serveur
 client/  bibliothèque cliente EnergyClient (sans MFC, testée)
 tools/   energy_export : export PDF en ligne de commande
+legacy/  module "ancien code" caractérisé, refactoré, corrigé (voir son README)
 app/     application MFC (Application, Frame, Document, vues tableau + OpenGL, dialogue)
-scripts/ build.ps1 (compiler + tester), run.ps1 (lancer)
+scripts/ build.ps1 (compiler + tester), run.ps1 (lancer), ci.ps1 (étapes du pipeline)
+Jenkinsfile  pipeline Configure / Build / Test
 tests/   tests unitaires et de bout en bout (GoogleTest)
 ```
 
