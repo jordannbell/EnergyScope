@@ -28,6 +28,8 @@ add_subdirectory(core)
 if(WIN32)
   add_subdirectory(net)
   add_subdirectory(server)
+  add_subdirectory(client)
+  add_subdirectory(app)
 endif()
 
 enable_testing()

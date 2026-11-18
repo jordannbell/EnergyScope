@@ -1,0 +1,40 @@
+// Resource script: menus, dialogs and strings, compiled into the .exe.
+#pragma code_page(65001)
+
+#include "resource.h"
+#include <afxres.h>
+
+IDR_MAINFRAME MENU
+BEGIN
+    POPUP "&Fichier"
+    BEGIN
+        MENUITEM "&Quitter",                            ID_APP_EXIT
+    END
+    POPUP "&Données"
+    BEGIN
+        MENUITEM "&Charger un site...\tCtrl+L",         ID_DATA_LOAD
+        MENUITEM "Ajouter des données d'&exemple...",   ID_DATA_SAMPLE
+    END
+END
+
+IDR_MAINFRAME ACCELERATORS
+BEGIN
+    "L", ID_DATA_LOAD, VIRTKEY, CONTROL
+END
+
+// Document template strings, separated by \n. First one = window title.
+STRINGTABLE
+BEGIN
+    IDR_MAINFRAME "EnergyScope\n\nEnergyScope\n\n\nEnergyScope.Document\nEnergyScope Document"
+END
+
+IDD_SITE DIALOGEX 0, 0, 200, 62
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Choisir un site"
+FONT 9, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    LTEXT           "Nom du site (sans espaces) :", IDC_STATIC, 7, 8, 186, 8
+    EDITTEXT        IDC_SITE, 7, 20, 186, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 89, 41, 50, 14
+    PUSHBUTTON      "Annuler", IDCANCEL, 143, 41, 50, 14
+END
