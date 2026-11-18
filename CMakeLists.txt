@@ -25,5 +25,9 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 add_subdirectory(core)
+if(WIN32)
+  add_subdirectory(server)
+endif()
+
 enable_testing()
 add_subdirectory(tests)
