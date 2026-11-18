@@ -114,15 +114,17 @@ TEST_F(LegacyReport, QuirkLinesThatDoNotFitTheBufferAreSilentlyDropped) {
     EXPECT_EQ(report(csv, 60), "a: n=1 min=1.00 max=1.00 avg=1.00 kwh=0.00\n");
 }
 
-// QUIRK: results accumulate across calls because the state is global.
-TEST_F(LegacyReport, QuirkStateCarriesOverBetweenCalls) {
+// FIXED (was a QUIRK): totals used to accumulate across calls because the
+// state was global. This test was changed on purpose in the commit that
+// fixed it; it used to expect "n=2 ... kwh=10.00".
+TEST_F(LegacyReport, EachCallStartsFromScratch) {
     report("a,0,10\n");
 
     EXPECT_EQ(report("a,3600,20\n"),
-              "a: n=2 min=10.00 max=20.00 avg=15.00 kwh=10.00\n");
+              "a: n=1 min=20.00 max=20.00 avg=20.00 kwh=0.00\n");
 }
 
-TEST_F(LegacyReport, ResetForgetsPreviousCalls) {
+TEST_F(LegacyReport, ResetIsHarmless) {
     report("a,0,10\n");
     lr_reset();
 

@@ -8,11 +8,15 @@
  * out: receives one line per site:
  *      "<site>: n=<count> min=<kw> max=<kw> avg=<kw> kwh=<energy>\n"
  *
- * Returns the length of the text written to out, or -1 if outSize <= 0.
+ * Every call is independent: nothing is remembered between calls.
+ * To accumulate on purpose, use energy::legacy::ReportBuilder.
+ *
+ * Returns the length of the text written to out, or -1 if out is null or
+ * outSize <= 0.
  */
 int lr_compute_report(const char *csv, char *out, int outSize);
 
-/* Forgets everything seen so far. */
+/* Does nothing. Kept so existing callers still compile. */
 void lr_reset(void);
 
 #endif

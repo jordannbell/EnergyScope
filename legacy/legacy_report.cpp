@@ -9,26 +9,20 @@
 
 #include "report_builder.hpp"
 
-namespace {
-
-// Still shared by every call, exactly like the old global arrays: results
-// accumulate between calls. (Kept for now so the refactoring changes nothing;
-// the characterization tests pin this.)
-energy::legacy::ReportBuilder g_builder;
-
-}  // namespace
-
-void lr_reset(void) { g_builder.reset(); }
+// Kept only for old callers; there is no shared state left to forget.
+void lr_reset(void) {}
 
 int lr_compute_report(const char *csv, char *out, int outSize) {
     if (out == nullptr || outSize <= 0) return -1;
 
-    g_builder.addCsv(csv != nullptr ? csv : "");
+    // Every call starts from scratch (the old code kept global totals).
+    energy::legacy::ReportBuilder builder;
+    builder.addCsv(csv != nullptr ? csv : "");
 
     // A site line that does not fit in the caller's buffer is dropped; a
     // later, shorter line may still fit (old behaviour).
     std::string result;
-    for (const std::string &line : g_builder.siteLines()) {
+    for (const std::string &line : builder.siteLines()) {
         if (result.size() + line.size() < static_cast<std::size_t>(outSize)) {
             result += line;
         }
