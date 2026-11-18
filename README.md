@@ -1,0 +1,80 @@
+# EnergyScope
+
+Mini logiciel **client-serveur** pour visualiser des mesures de production d'énergie.
+Projet d'apprentissage qui reprend, en petit, la stack d'un logiciel industriel :
+C++, MFC, OpenGL, SQL, CMake, Jenkins, Git.
+
+## Vocabulaire simple
+
+| Mot | Explication |
+|---|---|
+| **Client-serveur** | Deux programmes. Le *serveur* garde les données. Le *client* est la fenêtre que l'utilisateur voit et il demande les données au serveur. |
+| **Client lourd** | Un vrai programme installé sur le PC (pas un site web). |
+| **MFC** | Bibliothèque Microsoft (années 90) pour fabriquer des fenêtres, boutons et menus Windows en C++. Très présente dans les vieux logiciels. |
+| **OpenGL** | Bibliothèque pour dessiner avec la carte graphique : courbes, formes, 3D. |
+| **SQL / SQLite** | Langage pour interroger une base de données. SQLite est une base contenue dans un seul fichier. |
+| **CMake** | Outil qui décrit comment compiler le projet, sur n'importe quelle machine. |
+| **Jenkins** | Robot qui compile et teste le projet automatiquement à chaque modification. |
+| **Test unitaire** | Petit programme qui vérifie qu'un morceau de code fait bien son travail. |
+
+## Avancement
+
+- [x] Étape 1 : bibliothèque `core` (modèle de mesure + stockage SQLite) et tests
+- [x] Étape 2 : serveur réseau (protocole texte sur TCP, `energy_server`)
+- [ ] Étape 3 : client MFC
+- [ ] Étape 4 : vue OpenGL (courbes)
+- [ ] Étape 5 : export PDF et réduction du poids
+- [ ] Étape 6 : Jenkinsfile et module legacy refactoré
+
+## Compiler et tester (Windows, Visual Studio)
+
+Depuis un terminal "x64 Native Tools Command Prompt for VS" :
+
+```
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+## Lancer le serveur
+
+```
+build\server\energy_server.exe 5555 energy.sqlite
+```
+
+Le serveur n'écoute que sur `127.0.0.1` (ce PC). Protocole : une ligne par demande.
+
+| Demande | Réponse |
+|---|---|
+| `ADD solar-1 1700000000 12.5` | `OK` |
+| `GET solar-1` | `OK 2` puis une ligne `<heure> <kW>` par mesure |
+| autre chose | `ERR <raison>` |
+
+### Comment ça marche (simple)
+
+Un **socket** est une "prise" réseau. Le serveur crée une prise (`socket`), la fixe à un
+numéro de port (`bind`), puis attend (`listen`, `accept`). Un client se branche sur le
+même port. Ensuite les deux s'envoient du texte, comme au téléphone.
+Le TCP garantit que les octets arrivent dans l'ordre, mais pas qu'ils arrivent par
+paquets entiers : le serveur lit donc jusqu'au retour à la ligne `\n` (`readLine`).
+
+### Protections
+
+- Écoute sur localhost uniquement.
+- Ligne limitée à 4096 octets, délai de 5 s si le client ne dit rien.
+- Valeurs vérifiées (heure entière, puissance finie, nom de site ≤ 64 caractères).
+- La logique du protocole (`handleRequest`) est séparée du réseau : testable sans socket.
+
+## Structure
+
+```
+core/    logique métier : base SQLite + protocole texte (sans interface)
+server/  programme serveur (Winsock)
+tests/   tests unitaires GoogleTest
+```
+
+## Choix techniques
+
+- Requêtes SQL **paramétrées** (`?1`, `?2`) : le texte saisi n'est jamais collé dans la requête, ce qui empêche les injections SQL. Un test le vérifie.
+- Ressources (base, requêtes) libérées automatiquement (RAII) : pas de fuite mémoire.
+- Erreurs signalées par exceptions `std::runtime_error` avec le message SQLite.
