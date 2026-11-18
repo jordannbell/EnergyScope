@@ -22,13 +22,22 @@ C++, MFC, OpenGL, SQL, CMake, Jenkins, Git.
 - [x] Étape 1 : bibliothèque `core` (modèle de mesure + stockage SQLite) et tests
 - [x] Étape 2 : serveur réseau (protocole texte sur TCP, `energy_server`)
 - [x] Étape 3 : client MFC (fenêtre Windows, tableau des mesures, `energy_client`)
-- [ ] Étape 4 : vue OpenGL (courbes)
+- [x] Étape 4 : vue OpenGL (courbe de puissance, axes, grille, texte)
 - [ ] Étape 5 : export PDF et réduction du poids
 - [ ] Étape 6 : Jenkinsfile et module legacy refactoré
 
-## Compiler et tester (Windows, Visual Studio)
+## Compiler, tester, lancer (Windows, Visual Studio)
 
-Depuis un terminal "x64 Native Tools Command Prompt for VS" :
+Dans PowerShell, à la racine du projet :
+
+```
+.\scripts\build.ps1     # compile et lance les tests
+.\scripts\run.ps1       # démarre le serveur puis la fenêtre
+```
+
+`run.ps1` arrête le serveur quand tu fermes la fenêtre. Les données sont dans `energy.sqlite`.
+
+Sans les scripts, depuis un terminal "x64 Native Tools Command Prompt for VS" :
 
 ```
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
@@ -91,6 +100,22 @@ Autres notions utiles :
 - **Tableau virtuel** (`LVS_OWNERDATA`) : le tableau demande le texte des seules lignes visibles. Il reste fluide même avec des centaines de milliers de mesures.
 - Quand le document change, `UpdateAllViews()` prévient chaque vue, qui se redessine. Cette séparation permettra d'ajouter la vue OpenGL (étape 4) sans toucher aux données.
 
+### OpenGL en termes simples
+
+La fenêtre est coupée en deux par un **séparateur** (`CSplitterWnd`) : le tableau à gauche, le graphique à droite.
+Les deux sont des **vues du même document** : charger un site met à jour les deux d'un coup.
+
+Pour dessiner avec OpenGL dans une fenêtre Windows (`ChartView.cpp`) :
+
+1. **Format de pixels** (`ChoosePixelFormat`) : on dit à Windows quel type de pixels on veut (couleurs RGBA, double tampon).
+2. **Contexte OpenGL** (`wglCreateContext`) : l'"atelier" de dessin attaché à la fenêtre. Créé à la naissance de la fenêtre, détruit à sa mort.
+3. **Double tampon** : on dessine dans une image cachée, puis `SwapBuffers` l'affiche d'un coup. Pas de scintillement.
+4. **Projection** (`glOrtho`) : on dit à OpenGL quelle zone de données (temps × kW) correspond à la zone de la fenêtre. Les points de la courbe sont ensuite envoyés tels quels, sans conversion en pixels.
+5. **Courbe** : un tableau de points envoyé d'un coup (`glDrawArrays`, `GL_LINE_STRIP`), rapide même avec beaucoup de points.
+6. **Texte** : OpenGL ne sait pas écrire. On fabrique des listes d'affichage à partir d'une police Windows (`wglUseFontBitmaps`).
+
+Le calcul des axes (`ChartScale.cpp` : bornes, "graduations rondes" 1-2-5) est séparé du dessin, donc testé sans fenêtre.
+
 Limite connue : les appels réseau bloquent la fenêtre jusqu'à 5 s au maximum (ils tournent dans le thread de l'interface).
 
 ## Structure
@@ -100,7 +125,8 @@ core/    logique métier : base SQLite + protocole texte (sans interface)
 net/     petits outils Winsock communs au serveur et au client
 server/  programme serveur
 client/  bibliothèque cliente EnergyClient (sans MFC, testée)
-app/     application MFC (Application, Frame, Document, Vue, dialogue)
+app/     application MFC (Application, Frame, Document, vues tableau + OpenGL, dialogue)
+scripts/ build.ps1 (compiler + tester), run.ps1 (lancer)
 tests/   tests unitaires et de bout en bout (GoogleTest)
 ```
 
