@@ -1,6 +1,7 @@
 add_library(energy_core STATIC
   src/MeasurementRepository.cpp
   src/Protocol.cpp
+  src/ChartScale.cpp
 )
 target_include_directories(energy_core PUBLIC include)
 target_link_libraries(energy_core PUBLIC sqlite3)

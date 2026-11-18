@@ -1,4 +1,8 @@
-add_executable(core_tests MeasurementRepositoryTest.cpp ProtocolTest.cpp)
+add_executable(core_tests
+  MeasurementRepositoryTest.cpp
+  ProtocolTest.cpp
+  ChartScaleTest.cpp
+)
 target_link_libraries(core_tests PRIVATE energy_core GTest::gtest_main)
 
 if(WIN32)
