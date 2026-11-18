@@ -7,6 +7,7 @@ add_executable(core_tests
   PdfChartTest.cpp
   FileIoTest.cpp
   LegacyReportTest.cpp
+  ReportBuilderTest.cpp
 )
 target_link_libraries(core_tests PRIVATE energy_core energy_legacy GTest::gtest_main)
 
