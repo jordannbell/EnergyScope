@@ -21,7 +21,7 @@ C++, MFC, OpenGL, SQL, CMake, Jenkins, Git.
 
 - [x] Étape 1 : bibliothèque `core` (modèle de mesure + stockage SQLite) et tests
 - [x] Étape 2 : serveur réseau (protocole texte sur TCP, `energy_server`)
-- [ ] Étape 3 : client MFC
+- [x] Étape 3 : client MFC (fenêtre Windows, tableau des mesures, `energy_client`)
 - [ ] Étape 4 : vue OpenGL (courbes)
 - [ ] Étape 5 : export PDF et réduction du poids
 - [ ] Étape 6 : Jenkinsfile et module legacy refactoré
@@ -65,13 +65,47 @@ paquets entiers : le serveur lit donc jusqu'au retour à la ligne `\n` (`readLin
 - Valeurs vérifiées (heure entière, puissance finie, nom de site ≤ 64 caractères).
 - La logique du protocole (`handleRequest`) est séparée du réseau : testable sans socket.
 
+## Lancer le client MFC
+
+1. Démarrer le serveur (voir plus haut), port 5555.
+2. Lancer `build\app\energy_client.exe`.
+3. Menu **Données > Ajouter des données d'exemple...** : crée 24 mesures pour un site (ex. `solar-1`) et les affiche.
+4. Menu **Données > Charger un site...** (Ctrl+L) : affiche les mesures d'un site déjà enregistré.
+
+Prérequis : Visual Studio avec le composant **MFC C++**.
+
+### MFC en termes simples
+
+MFC organise une application en 4 objets qui travaillent ensemble (modèle *Document/Vue*) :
+
+| Objet | Rôle | Dans ce projet |
+|---|---|---|
+| **Application** (`CWinApp`) | Démarre le programme, crée la fenêtre | `EnergyApp.cpp` |
+| **Frame** (`CFrameWnd`) | La fenêtre : barre de titre, menu, bordure | `MainFrame.h` |
+| **Document** (`CDocument`) | Les **données** et la logique (sans dessin) | `EnergyDoc.*` |
+| **Vue** (`CView`) | L'**affichage** des données du document | `MeasurementView.*` (un tableau) |
+
+Autres notions utiles :
+- **Message map** (`BEGIN_MESSAGE_MAP`) : table qui dit "quand l'utilisateur clique sur ce menu, appelle cette fonction".
+- **Fichier de ressources** (`EnergyScope.rc`) : décrit menus, boîtes de dialogue et textes, intégrés dans le `.exe`.
+- **Tableau virtuel** (`LVS_OWNERDATA`) : le tableau demande le texte des seules lignes visibles. Il reste fluide même avec des centaines de milliers de mesures.
+- Quand le document change, `UpdateAllViews()` prévient chaque vue, qui se redessine. Cette séparation permettra d'ajouter la vue OpenGL (étape 4) sans toucher aux données.
+
+Limite connue : les appels réseau bloquent la fenêtre jusqu'à 5 s au maximum (ils tournent dans le thread de l'interface).
+
 ## Structure
 
 ```
 core/    logique métier : base SQLite + protocole texte (sans interface)
-server/  programme serveur (Winsock)
-tests/   tests unitaires GoogleTest
+net/     petits outils Winsock communs au serveur et au client
+server/  programme serveur
+client/  bibliothèque cliente EnergyClient (sans MFC, testée)
+app/     application MFC (Application, Frame, Document, Vue, dialogue)
+tests/   tests unitaires et de bout en bout (GoogleTest)
 ```
+
+Le client MFC n'utilise jamais Winsock directement : il passe par `EnergyClient`.
+Raison technique : `winsock2.h` et `afxwin.h` (MFC) ne se mélangent pas dans un même fichier.
 
 ## Choix techniques
 
