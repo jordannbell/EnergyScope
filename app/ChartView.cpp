@@ -14,7 +14,7 @@ constexpr int kMarginRight = 16;
 constexpr int kMarginTop = 28;
 constexpr int kMarginBottom = 30;
 constexpr int kMinPlotSize = 20;
-constexpr int kGridDivisions = 4;
+constexpr int kGridDivisions = energy::kPowerDivisions;  // same grid on both axes
 constexpr int kLabelGap = 6;
 constexpr int kFontPixels = 13;
 

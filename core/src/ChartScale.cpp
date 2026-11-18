@@ -6,28 +6,43 @@
 
 namespace energy {
 
-double niceCeil(double v) {
-    if (!(v > 0.0) || !std::isfinite(v)) return 1.0;
+namespace {
 
-    const double base = std::pow(10.0, std::floor(std::log10(v)));
-    const double fraction = v / base;  // in [1, 10)
-    double nice = 10.0;
-    if (fraction <= 1.0) {
-        nice = 1.0;
-    } else if (fraction <= 2.0) {
-        nice = 2.0;
-    } else if (fraction <= 5.0) {
-        nice = 5.0;
+struct PowerRange {
+    double yMin;
+    double yMax;
+};
+
+constexpr PowerRange kDefaultPowerRange{0.0, 1.0};
+constexpr double kStepMantissas[] = {1.0, 2.0, 2.5, 5.0};
+constexpr double kRelativeSlack = 1e-9;  // absorbs floating-point rounding
+
+// Finds the smallest round step so that kPowerDivisions steps, starting on a
+// multiple of the step at or below `lowest`, reach at least `highest`.
+PowerRange fitPowerRange(double lowest, double highest) {
+    const double minStep = (highest - lowest) / kPowerDivisions;
+    for (int exponent = static_cast<int>(std::floor(std::log10(minStep)));; ++exponent) {
+        for (const double mantissa : kStepMantissas) {
+            const double step = mantissa * std::pow(10.0, exponent);
+            if (step < minStep * (1.0 - kRelativeSlack)) continue;
+
+            const double yMin = std::floor(lowest / step) * step;
+            const double yMax = yMin + kPowerDivisions * step;
+            if (yMax >= highest - step * kRelativeSlack) return {yMin, yMax};
+        }
+        if (exponent > std::numeric_limits<double>::max_exponent10) break;
     }
-    return nice * base;
+    return kDefaultPowerRange;  // unreachable for finite input
 }
 
+}  // namespace
+
 ChartBounds computeBounds(const std::vector<Measurement>& rows) {
-    if (rows.empty()) return {0, 1, 0.0, 1.0};
+    if (rows.empty()) return {0, 1, kDefaultPowerRange.yMin, kDefaultPowerRange.yMax};
 
     std::int64_t tMin = rows.front().timestamp;
     std::int64_t tMax = tMin;
-    double lowest = 0.0;   // axis always includes 0
+    double lowest = 0.0;   // the axis always includes 0
     double highest = 0.0;
     for (const auto& m : rows) {
         tMin = std::min(tMin, m.timestamp);
@@ -44,8 +59,14 @@ ChartBounds computeBounds(const std::vector<Measurement>& rows) {
         }
     }
 
-    const double yMin = lowest < 0.0 ? -niceCeil(-lowest) : 0.0;
-    return {tMin, tMax, yMin, niceCeil(highest)};
+    if (highest == lowest) highest = lowest + 1.0;  // all zero
+    PowerRange power = std::isfinite(lowest) && std::isfinite(highest)
+                           ? fitPowerRange(lowest, highest)
+                           : kDefaultPowerRange;
+    if (!std::isfinite(power.yMin) || !std::isfinite(power.yMax)) {
+        power = kDefaultPowerRange;
+    }
+    return {tMin, tMax, power.yMin, power.yMax};
 }
 
 }  // namespace energy
