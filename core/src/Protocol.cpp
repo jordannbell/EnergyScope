@@ -1,7 +1,7 @@
 #include "energy/Protocol.hpp"
 
-#include <charconv>
-#include <cmath>
+#include "energy/Parse.hpp"
+
 #include <cstdint>
 #include <exception>
 #include <sstream>
@@ -23,18 +23,6 @@ std::vector<std::string> splitWords(const std::string& line) {
         words.push_back(w);
     }
     return words;
-}
-
-bool parseInt64(const std::string& s, std::int64_t& out) {
-    const char* end = s.data() + s.size();
-    const auto r = std::from_chars(s.data(), end, out);
-    return r.ec == std::errc() && r.ptr == end;
-}
-
-bool parseDouble(const std::string& s, double& out) {
-    const char* end = s.data() + s.size();
-    const auto r = std::from_chars(s.data(), end, out);
-    return r.ec == std::errc() && r.ptr == end && std::isfinite(out);
 }
 
 bool validSite(const std::string& s) {
@@ -73,7 +61,7 @@ std::string handleGet(MeasurementRepository& repo,
     std::ostringstream out;
     out << "OK " << rows.size() << "\n";
     for (const auto& m : rows) {
-        out << m.timestamp << " " << m.powerKw << "\n";
+        out << m.timestamp << " " << formatDouble(m.powerKw) << "\n";
     }
     return out.str();
 }

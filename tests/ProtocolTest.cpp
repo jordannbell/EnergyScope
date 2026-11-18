@@ -23,6 +23,12 @@ TEST_F(ProtocolTest, GetReturnsCountThenRows) {
     EXPECT_EQ(handleRequest(repo, "GET s"), "OK 2\n100 1.5\n200 2\n");
 }
 
+TEST_F(ProtocolTest, GetKeepsFullPrecisionOfPower) {
+    handleRequest(repo, "ADD s 1 12.3456789");
+
+    EXPECT_EQ(handleRequest(repo, "GET s"), "OK 1\n1 12.3456789\n");
+}
+
 TEST_F(ProtocolTest, GetUnknownSiteReturnsZeroRows) {
     EXPECT_EQ(handleRequest(repo, "GET nope"), "OK 0\n");
 }

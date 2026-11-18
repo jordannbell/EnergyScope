@@ -26,6 +26,7 @@ FetchContent_MakeAvailable(googletest)
 
 add_subdirectory(core)
 if(WIN32)
+  add_subdirectory(net)
   add_subdirectory(server)
 endif()
 
